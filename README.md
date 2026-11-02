@@ -29,3 +29,4 @@ Legacy Bybit summaries in `research/legacy_intraday_results.csv` are retained fo
 ## Reproducibility and safety
 
 Experiments save config, code hash, metrics, trade ledger, costs, split indices, and dataset manifests. Do not tune on the final chronological holdout. No API secrets belong in the repository. There is no live trading adapter, key handling, or order placement in this project.
+Current portfolio candidate screen and limitations: see [`research/RESEARCH_REPORT.md`](research/RESEARCH_REPORT.md), with reproducible engine `src/portfolio_momentum.py` and outputs `results/portfolio_momentum_metrics.json`, `results/portfolio_momentum_trades.csv`, `results/portfolio_momentum_equity.csv`. Current status remains research-only / NO-GO for deployment.

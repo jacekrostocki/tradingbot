@@ -49,3 +49,40 @@ These are individual-asset candidate screens, not a combined portfolio. The best
 3. Add mark-price candles or a justified stop-trigger proxy, tick-size/lot-size and contract-spec history, spread observations, and gap/partial-fill stresses.
 4. Keep the final holdout frozen; use a new future period for any candidate selected after the current comparison.
 
+
+## Portfolio candidate screen (2026-11-02)
+
+A second, portfolio-level screen was run after the isolated-asset results. It allows at most **one open position across BTC, ETH, SOL and XRP** and ranks eligible signals by the strongest sign-aligned 30-day return. The fixed candidate entries are the four existing signal families (`trend_donchian`, `momentum_structure`, `breakout_retest`, `ema_pullback`), with the existing closed-bar 4h trend filter. Signals execute at the next 1h open. Position risk is 0.25% of current equity, notional is capped at 0.75× equity, and the stop starts at 2× ATR with a 3× ATR trail after +1R. The test starts only when Kraken funding history begins (2025-10-30); all observed held hours have funding data except a few identified gaps. This does not repair the missing funding history before that date.
+
+The four entry families and cost stresses were screened with fixed parameters. Cost baseline is 5 bps fee plus 3 bps spread/slippage per side; stress keeps the fee and raises spread/slippage to 7.5 bps per side. Stress trade counts can differ because higher costs change equity and therefore later risk gates/position sizes. Funding is charged at observed hourly rates; 14 held hours are unobserved for the leading baseline run and are counted as missing, not assumed evidence of complete funding coverage.
+
+### Leader by full funding-era net return under stress
+
+| Entry | 2025-10-30 to 2026-11-02 baseline | Stress | Walk-forward 1 baseline | Walk-forward 2 baseline | Final screened window baseline |
+|---|---:|---:|---:|---:|---:|
+| Breakout + retest | +4.76%, PF 1.23, DD -4.11%, 153 trades | +1.38%, PF 1.07, DD -4.95%, 156 trades | +2.00%, PF 1.44, 34 trades | -2.06%, PF 0.72, 49 trades | +4.86%, PF 1.56, 70 trades |
+| 4h trend + Donchian | +1.73%, PF 1.06, DD -6.01%, 201 trades | -2.92%, PF 0.86, DD -6.04%, 153 trades | +3.20% | -2.75% | +1.37% |
+| Momentum + price structure | -4.21%, PF 0.85, DD -6.13%, 217 trades | -4.44%, PF 0.75, DD -6.17%, 130 trades | -1.70% | -0.91% | -3.18% |
+| EMA pullback | -1.65%, PF 0.90, DD -6.06%, 116 trades | -2.60%, PF 0.84, DD -6.01%, 118 trades | -0.14% | -0.68% | +4.36% |
+
+The leading breakout/retest run had 153 trades in one year (median hold 13 hours); 152 exited at the stop. ETH contributed +$86.15 net, while BTC contributed -$33.34 and XRP -$20.60. This is too much asset concentration and turnover to treat the result as a robust diversified edge. The “final screened window” is 2026-05-22 to 2026-11-02. It was already inspected in the earlier isolated-asset screen, so despite being later in time it is **not an untouched independent holdout**. The portfolio candidate's walk-forward returns change sign between consecutive folds.
+
+**Decision: select breakout + retest as the lead research candidate only; NO-GO for a claim of profitability and NO-GO for paper/live promotion.** Its roughly +1.4% stress result for the full funding-era sample is positive but thin, one chronological fold is negative, and the apparent gains are concentrated in ETH. No candidate establishes a repeatable net edge or the aspirational 10% weekly/monthly return. Continue only with forward paper tracking and a new, predeclared holdout after the rules are frozen; do not optimize to the screened final window.
+
+### Reproduction and artifact map
+
+Run from the repository root:
+
+```bash
+python -m src.portfolio_momentum
+python -m unittest discover -s tests -v
+python -m src.audit_data
+```
+
+`src/portfolio_momentum.py` stores the full rule set and writes `results/portfolio_momentum_metrics.json` (including code/data SHA-256 fingerprints), `results/portfolio_momentum_trades.csv`, and `results/portfolio_momentum_equity.csv`. The prior one-asset grid remains in `src/backtest.py` and the original `results/metrics.*`/`trades.csv`. Tests passed (4/4); the data audit passed all 16 files, with the known 5 funding-hour gaps per asset and no candle gaps.
+
+### Research references
+
+- Hudson & Urquhart (2021), *Technical trading and cryptocurrencies*: out-of-sample predictability varied by coin, with no Bitcoin predictability in their tested OOS period. [Springer](https://doi.org/10.1007/s10479-019-03357-1).
+- *Dynamic time series momentum of cryptocurrencies* (2021): examines time-series momentum at multiple data frequencies; this motivates testing a slower momentum filter but does not validate this implementation. [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S1062940821000590).
+- Bailey et al., *The Probability of Backtest Overfitting*: repeated candidate selection raises the risk of selecting a spurious winner. [UC eScholarship](https://escholarship.org/uc/item/4w1110bb).
