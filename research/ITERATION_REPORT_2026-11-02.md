@@ -38,9 +38,9 @@ For the 1-position filtered strategy in the screened final interval (23 weekly o
 
 The combined three-year 1-position runs reach the 6% drawdown stop and remain disabled; their return is the realized outcome after the kill switch, not a hypothetical continuously trading return. Their OOS interpretation is limited by the absence of untouched data. No point estimate or confidence interval here supports deployment.
 
-![Corrected one-position three-year equity curve, including the permanent drawdown halt](../results/full_history_portfolio/equity_curve_1pos_3y.png)
+![Corrected one-position three-year equity curve, including the permanent drawdown halt](../results/full_history_portfolio/equity_curve_1pos_3y.svg)
 
-![Weekly PnL distribution for the screened final period](../results/full_history_portfolio/weekly_pnl_distribution_1pos_screened.png)
+![Weekly PnL distribution for the screened final period](../results/full_history_portfolio/weekly_pnl_distribution_1pos_screened.svg)
 
 ## Other hypotheses and iteration decisions
 
@@ -53,9 +53,10 @@ No ranking of five *qualified* strategies is warranted. The best documented conf
 - `src/merge_funding_history.py` — obtain/merge Kraken funding export and API data, audit overlap and coverage.
 - `src/full_history_portfolio_screen.py`, `src/portfolio_concurrency.py` — reproducible portfolio run with shared risk and hard liquidation.
 - `results/full_history_portfolio/metrics.json` — metrics, hashes, risk-trigger counts.
+- `results/full_history_portfolio/metrics_summary.csv` — compact comparison of returns, DD, PF, hit rate, costs, and trade counts across every slot count and chronological window.
 - `results/full_history_portfolio/trades.csv` — full trade ledger, fees and funding.
 - `results/full_history_portfolio/equity.csv` — hourly realized and adverse-mark equity.
-- `results/full_history_portfolio/equity_curve_1pos_3y.png`, `weekly_pnl_distribution_1pos_screened.png`, `weekly_pnl_1pos_screened.csv` — equity curve and weekly return distribution.
+- `results/full_history_portfolio/equity_curve_1pos_3y.svg`, `weekly_pnl_distribution_1pos_screened.svg`, `weekly_pnl_1pos_screened.csv` — equity curve and weekly return distribution.
 - `results/full_history_individual/` — individual signal-family diagnostic screens.
 - `data/processed/kraken_futures_*_funding_complete_1h.csv` — merged funding series and manifests; source archive is excluded from Git.
 
