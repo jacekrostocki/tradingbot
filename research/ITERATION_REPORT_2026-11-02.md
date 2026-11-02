@@ -1,98 +1,66 @@
-# Trading Quant — intraday research update, 2 Nov 2026
+# Trading Quant — research update, 2 Nov 2026
 
 ## Decision
 
-**No strategy qualifies for paper or live promotion. The +3% average weekly net return objective is not achieved.** No orders were submitted. The best current *research candidate* is the one-position Kraken breakout/retest strategy with an adverse-funding crowding filter, but its edge is weak and statistically uncertain: the weekly block-bootstrap interval includes zero, the two middle chronological windows are not consistently positive, and the nominal final period is not untouched because many previous screens already evaluated it.
+**No strategy qualifies for paper trading.** No untouched out-of-sample period exists, no tested configuration demonstrates a statistically credible positive weekly return, and none approaches a defensible +3% average net week at the specified risk budget. No live orders were submitted.
 
-## Data and execution assumptions
+The strongest positive chronological slice is the previously screened 22 May–2 Nov 2026 period. It is not independent evidence: many earlier strategy and filter choices were evaluated on it. The 1-position funding-filter version returned +5.37% base / +3.96% stress on that slice, yet lost 1.30% in the 2023–25 training window, lost 1.87% in WF2, and hit the portfolio drawdown kill switch in the training window. Reject it as a qualified edge.
 
-- Kraken Futures linear perpetual trade candles: BTC, ETH, SOL and XRP, 1h / 4h / 1d, 2 Nov 2023 to 2 Nov 2026. Hourly funding is available only from 30 Oct 2025; funding is not imputed outside the published series. Funding coverage is complete in the reported funding-era windows.
-- Starting equity: USD 900. One portfolio position risks 0.25% of equity to initial stop. Multi-position tests split that single 0.25% total stop-risk budget evenly across active slots. Maximum notional is 0.75× equity per position; observed aggregate exposure stayed below 0.53× equity in the filtered 1-position case and below the 2× leverage ceiling in all tested cases.
-- Fees: 5 bps per side. Baseline execution friction: 3 bps per side (spread + slippage); stress: 7.5 bps per side. Historical hourly Kraken funding is charged to open positions.
-- Stops use trade-candle OHLC, not mark-price ticks. Partial fills, queue position, latency, liquidation, and historical contract changes are not simulated. Results are a screening backtest, not execution proof.
+## Data and reproducibility
 
-## New hypotheses tested
+- Kraken Futures linear perpetual 1h candles for BTC, ETH, SOL, XRP run from 2 Nov 2023 through 2 Nov 2026, with matching 4h and 1d files. Candle audit: gapless.
+- I merged Kraken’s downloadable historical funding export with the previously downloaded API series. Each asset now has 26,308 of 26,316 hourly rates (99.9696% coverage); eight hours are missing per asset and left unfilled. In the 2,243-hour overlap, all four assets match exactly. Funding is charged hourly while a position is open.
+- Portfolio costs: 5 bps fee per side; baseline spread/slippage friction 3 bps per side; stress friction 7.5 bps per side. Market entries/exits are modeled with OHLC bars, adverse intrabar stop ordering, and adverse-price liquidation on risk-kill bars. This remains a bar-data approximation; it does not simulate queue position, partial fills, latency, mark-price liquidation, or live funding publication delays.
+- Each configuration starts with $900. The 1–4 position runs share a fixed total 0.25% initial stop-risk budget, divided evenly among available slots. Per-position notional cap is 0.75× equity, so the aggregate model exposure cannot exceed 2× for four positions. Strategy signals are 1h breakout/retest aligned with the 4h EMA50/EMA200 trend. The adverse-funding filter rejects a candidate if its side would pay ≥2 bp/hour based on the last known prior hourly rate.
+- Daily -1%, UTC Monday-week -3%, and peak-to-trough -6% controls now liquidate open positions at the adverse bar extreme plus modeled friction. The drawdown threshold permanently disables new entries for that run. OHLC gaps and execution costs can cause a small realized overshoot; observed 1-position breaches were about 0.02–0.07 percentage points. Limits are not mathematical guarantees in live trading.
+- Reproduce: `python -m src.merge_funding_history`, `python -m src.audit_data`, `python -m src.full_history_portfolio_screen`. Input hashes, script hashes, trade ledgers, metrics, and hourly equity curves are saved under `results/`.
 
-1. **Funding crowding filter.** Keep the existing 1h breakout/retest + 4h EMA50/EMA200 directional setup. At the signal close, read the last already-observed funding rate. Reject a trade if its side would pay at least 2 bps per hour (`side × funding >= 0.00002`). Reject candidates without an observed prior funding value. This is a fixed economic threshold, not an optimized sweep.
-2. **Trend / range hybrid.** Use breakout/retest in a confirmed 4h trend; use 1h Bollinger(20, 2σ) + RSI(14) mean reversion only when the 4h trend state is neutral. Range stop: 1.5 ATR, target: Bollinger middle, 24h time stop. Trend stop: 2 ATR, 3 ATR trail after +1R, 72h time stop.
-3. **Volatility compression/expansion.** Require the prior 48h mean ATR to be no more than 80% of the prior 10d mean ATR, followed by breakout-hour ATR at least 125% of the 48h mean, before accepting a breakout/retest.
-4. **Concurrency with shared risk.** Compare 1, 2, 3 and 4 simultaneous slots, allocating a fixed 0.25% total initial-stop risk across slots. Run both the baseline and funding-filtered signals. This corrects the earlier screen where each concurrent position could independently consume 0.25% risk.
+## Chronological portfolio results
 
-## Candidate comparison — one position, 0.25% risk
+Returns are net of modeled fees, friction, and funding. Each period is independently initialized at $900. Values are `net return / max drawdown / trades / profit factor`. `screened` means it was repeatedly examined during prior research; it is not an untouched holdout.
 
-All returns are compound net returns for each independent period, with baseline/stress execution costs.
+| Signal / positions (total open stop risk 0.25%) | Train 2 Nov 2023–30 Oct 2025, base / stress | WF1 30 Oct 2025–1 Feb 2026, base / stress | WF2 1 Feb–22 May 2026, base / stress | Screened 22 May–2 Nov 2026, base / stress | Combined 3y run, base / stress |
+|---|---|---|---|---|---|
+| Breakout/retest, 1 | -2.23% / -6.01% / 94 / 0.83; -2.60% / -6.00% / 88 / 0.80 | +2.00% / -3.04% / 34 / 1.44; +1.57% / -3.14% / 34 / 1.35 | -2.06% / -4.11% / 49 / 0.72; -3.05% / -4.44% / 51 / 0.60 | +4.86% / -2.06% / 70 / 1.56; +2.95% / -2.45% / 71 / 1.33 | -2.23% / -6.01% / 94 / 0.83; -2.60% / -6.00% / 88 / 0.80 |
+| Breakout/retest + funding filter, 1 | -1.30% / -6.02% / 198 / 0.95; -3.39% / -6.07% / 197 / 0.87 | +2.00% / -3.04% / 34 / 1.44; +1.57% / -3.14% / 34 / 1.35 | -1.87% / -3.93% / 48 / 0.73; -2.88% / -4.27% / 50 / 0.61 | +5.37% / -2.18% / 66 / 1.66; +3.96% / -2.21% / 65 / 1.48 | -1.30% / -6.02% / 198 / 0.95; -3.39% / -6.07% / 197 / 0.87 |
+| Breakout/retest, 2 | +3.97% / -3.69% / 473 / 1.12; +1.00% / -4.44% / 474 / 1.03 | -0.76% / -3.51% / 64 / 0.84; -0.99% / -3.55% / 64 / 0.79 | -1.82% / -3.09% / 79 / 0.70; -2.44% / -3.42% / 81 / 0.61 | +1.27% / -1.71% / 113 / 1.17; +0.29% / -1.77% / 113 / 1.04 | +2.71% / -5.10% / 728 / 1.05; -2.82% / -6.02% / 653 / 0.94 |
+| Breakout/retest + funding filter, 2 | +2.96% / -2.77% / 361 / 1.12; +0.60% / -3.07% / 361 / 1.02 | -0.76% / -3.51% / 64 / 0.84; -0.99% / -3.55% / 64 / 0.79 | -1.73% / -3.00% / 78 / 0.71; -2.36% / -3.34% / 80 / 0.61 | +1.29% / -1.49% / 105 / 1.18; +0.35% / -1.61% / 105 / 1.05 | +1.82% / -4.97% / 607 / 1.04; -3.35% / -6.01% / 541 / 0.91 |
+| Breakout/retest, 3 | +1.43% / -2.98% / 538 / 1.06; -0.92% / -3.54% / 539 / 0.96 | -0.87% / -3.31% / 84 / 0.80; -1.07% / -3.34% / 84 / 0.75 | -1.49% / -2.42% / 94 / 0.69; -1.86% / -2.73% / 95 / 0.61 | +1.14% / -1.34% / 133 / 1.20; +0.40% / -1.39% / 133 / 1.07 | +0.27% / -4.41% / 848 / 1.01; -3.34% / -5.16% / 850 / 0.91 |
+| Breakout/retest + funding filter, 3 | +0.55% / -2.28% / 405 / 1.03; -1.03% / -2.97% / 405 / 0.94 | -0.87% / -3.31% / 84 / 0.80; -1.07% / -3.34% / 84 / 0.75 | -1.38% / -2.31% / 91 / 0.70; -1.75% / -2.62% / 92 / 0.62 | +1.52% / -1.04% / 119 / 1.29; +0.78% / -1.23% / 119 / 1.15 | -0.12% / -4.05% / 698 / 1.00; -2.98% / -4.78% / 699 / 0.91 |
+| Breakout/retest, 4 | +0.51% / -2.10% / 548 / 1.03; -1.50% / -3.38% / 549 / 0.92 | -0.85% / -2.78% / 91 / 0.76; -1.01% / -2.81% / 91 / 0.71 | -1.09% / -1.79% / 95 / 0.70; -1.37% / -2.03% / 96 / 0.62 | +1.26% / -0.98% / 140 / 1.29; +0.63% / -1.05% / 140 / 1.14 | -0.14% / -3.55% / 873 / 1.00; -3.17% / -4.78% / 875 / 0.89 |
+| Breakout/retest + funding filter, 4 | +0.44% / -1.83% / 410 / 1.03; -0.76% / -2.17% / 410 / 0.94 | -0.85% / -2.78% / 91 / 0.76; -1.01% / -2.81% / 91 / 0.71 | -1.01% / -1.71% / 92 / 0.71; -1.29% / -1.95% / 93 / 0.63 | +1.25% / -0.74% / 124 / 1.32; +0.65% / -0.87% / 124 / 1.17 | -0.13% / -3.28% / 716 / 0.99; -2.33% / -3.77% / 717 / 0.90 |
 
-| Candidate / period | Cost case | Net return | PF | Max DD | Trades | Win rate | Expectancy / trade |
-|---|---|---:|---:|---:|---:|---:|---:|
-| Breakout/retest, funding era (30 Oct 2025–2 Nov 2026) | Base | +4.76% | 1.231 | -4.11% | 153 | 37.9% | — |
-| Breakout/retest | Stress | +1.38% | 1.065 | -4.95% | 156 | 34.6% | — |
-| **Funding-filtered breakout/retest, same period** | **Base** | **+5.47%** | **1.275** | **-4.00%** | **148** | **38.5%** | **+$0.33** |
-| **Funding-filtered breakout/retest** | **Stress** | **+2.54%** | **1.127** | **-5.01%** | **149** | **35.6%** | **+$0.15** |
-| Trend/range hybrid, same period | Base | -3.71% | 0.760 | -6.03% | 101 |  — | — |
-| Trend/range hybrid | Stress | -4.13% | 0.705 | -6.04% | 91 | — | — |
-| Compression/expansion filter, same period | Base | -0.50% | 0.848 | -2.68% | 22 | — | — |
-| Compression/expansion filter | Stress | -0.66% | 0.797 | -2.67% | 22 | — | — |
-| BB/RSI mean reversion, same period | Base | -3.94% | 0.838 | -6.02% | 165 | 38.2% | — |
-| BB/RSI mean reversion | Stress | -5.89% | 0.738 | -6.11% | 157 | 36.9% | — |
+More slots increase turnover and did not improve robustness. The two-position baseline has the best base-cost three-year compounded result (+2.71%), but falls to -2.82% under stress and loses in both WF windows; this does not establish an edge. One-position cases do not meet the 200 trade OOS threshold in the already-screened final interval. More active portfolios exceed 200 trades in some periods, but all those data have already influenced research choices.
 
-The two new strategy combinations (hybrid and compression filter) were rejected. The funding filter improved the baseline by about 0.7 percentage points in base costs and 1.2 points in stress, but that difference is too small to establish an edge on this reused sample.
+### Weekly returns and uncertainty
 
-## Walk-forward and screened holdout
+For the 1-position filtered strategy in the screened final interval (23 weekly observations), mean weekly adverse-mark return was +0.222% base and +0.164% stress; median +0.049% and +0.008%; positive weeks 56.5% each; worst week -0.80% and -0.95%. A circular 4-week block bootstrap (5,000 draws, seed 20261102) gives 95% intervals of -0.007% to +0.462% base and -0.045% to +0.378% stress. The interval spans zero, and the sample is screened. In WF2, mean weekly return was -0.117% base / -0.182% stress; intervals also span zero. This is nowhere near the +3% weekly objective.
 
-| Period | Funding-filtered base | Funding-filtered stress | Baseline base | Baseline stress |
-|---|---:|---:|---:|---:|
-| WF1, 30 Oct 2025–1 Feb 2026 | +2.00% | +1.57% | +2.00% | +1.57% |
-| WF2, 1 Feb–22 May 2026 | -1.87% | -2.88% | -2.06% | -3.05% |
-| Final screened period, 22 May–2 Nov 2026 | +5.37% | +3.96% | +4.86% | +2.95% |
+The combined three-year 1-position runs reach the 6% drawdown stop and remain disabled; their return is the realized outcome after the kill switch, not a hypothetical continuously trading return. Their OOS interpretation is limited by the absence of untouched data. No point estimate or confidence interval here supports deployment.
 
-The final period is labelled **screened**, not untouched: prior research compared many strategies and filters on this same interval. Its 66 filtered-candidate trades do not satisfy the 200-trade OOS target. The funding-era aggregate has 148 trades but also contains the previously evaluated WF1, WF2 and final period; it is not an independent test.
+![Corrected one-position three-year equity curve, including the permanent drawdown halt](../results/full_history_portfolio/equity_curve_1pos_3y.png)
 
-## Weekly distribution and uncertainty — funding-filtered one-position candidate
+![Weekly PnL distribution for the screened final period](../results/full_history_portfolio/weekly_pnl_distribution_1pos_screened.png)
 
-Weekly returns use adverse mark-to-market equity. Sharpe and Sortino are annualized from weekly observations and are approximate. The 95% interval uses 5,000 circular 4-week block-bootstrap resamples of the mean weekly return.
+## Other hypotheses and iteration decisions
 
-| Period / costs | Mean week | Median week | Positive weeks | Weeks ≥ +3% | Worst week | Sharpe | Sortino | 95% block-bootstrap CI of mean |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Funding era / base | +0.107% | -0.084% | 38.5% | 1 / 52 | -1.05% | 0.86 | 1.90 | -0.089% to +0.307% |
-| Funding era / stress | +0.053% | -0.116% | 36.5% | 1 / 52 | -1.19% | 0.45 | 0.91 | -0.131% to +0.241% |
-| Final screened / base | +0.223% | -0.071% | 47.8% | 1 / 23 | -1.05% | 1.62 | 3.88 | -0.023% to +0.488% |
-| Final screened / stress | +0.165% | -0.095% | 47.8% | 1 / 23 | -1.19% | 1.24 | 2.77 | -0.055% to +0.398% |
+The prior funding-era screens tested five signal families: breakout/retest with 4h trend, breakout/retest plus adverse funding, trend/range hybrid, ATR compression-to-expansion breakout filter, and BB(20,2σ)/RSI(14) mean reversion. In that earlier 1-year screen the hybrid, compression filter, and mean-reversion-only variant lost after costs. Those separate exploratory scripts used entry halts rather than the corrected hard liquidation rule and are not risk-compliant candidates; their numerical metrics are retained only as exploratory diagnostics. The corrected three-year portfolio engine was then applied to baseline and funding-filtered breakout across 1–4 positions. It rejects both as validated edges: WF instability and cost stress overwhelm the favorable screened slice.
 
-For the full funding era, the weekly mean does not differ reliably from zero. The one observed +3% week in 52 weeks is not evidence of a repeatable +3% weekly process. No tested candidate approaches a 3% average week under the stipulated risk budget.
+No ranking of five *qualified* strategies is warranted. The best documented configurations above are research screens, not validated candidates. The immediate research boundary is historical-data limitations: there is no untouched future sample yet, no archived historical order book/trade-by-trade execution to calibrate spread/queue/impact, and funding export has eight missing hours per asset. A preregistered forward paper-trading evaluation would need to start only after freezing a strategy; there is no recommended candidate to paper trade now.
 
-![Funding-filtered candidate equity curve](../results/funding_filter_equity_curve.png)
+## Files
 
-![Funding-filtered candidate weekly return distribution](../results/funding_filter_weekly_distribution.png)
+- `src/merge_funding_history.py` — obtain/merge Kraken funding export and API data, audit overlap and coverage.
+- `src/full_history_portfolio_screen.py`, `src/portfolio_concurrency.py` — reproducible portfolio run with shared risk and hard liquidation.
+- `results/full_history_portfolio/metrics.json` — metrics, hashes, risk-trigger counts.
+- `results/full_history_portfolio/trades.csv` — full trade ledger, fees and funding.
+- `results/full_history_portfolio/equity.csv` — hourly realized and adverse-mark equity.
+- `results/full_history_portfolio/equity_curve_1pos_3y.png`, `weekly_pnl_distribution_1pos_screened.png`, `weekly_pnl_1pos_screened.csv` — equity curve and weekly return distribution.
+- `results/full_history_individual/` — individual signal-family diagnostic screens.
+- `data/processed/kraken_futures_*_funding_complete_1h.csv` — merged funding series and manifests; source archive is excluded from Git.
 
-## 1–4 positions under the same total 0.25% initial-stop risk
+## Exchange sources
 
-| Candidate | Slots | Funding-era return base / stress | Final screened return base / stress | Funding-era max DD base / stress |
-|---|---:|---:|---:|---:|
-| Baseline breakout/retest | 1 | +4.76% / +1.38% | +4.86% / +2.95% | -4.11% / -4.95% |
-| Baseline breakout/retest | 2 | -1.33% / -3.13% | +1.27% / +0.29% | -4.46% / -5.40% |
-| Baseline breakout/retest | 3 | -1.23% / -2.52% | +1.14% / +0.40% | -3.66% / -4.25% |
-| Baseline breakout/retest | 4 | -0.70% / -1.75% | +1.26% / +0.63% | -3.01% / -3.41% |
-| Funding-filtered breakout/retest | 1 | +5.47% / +2.54% | +5.37% / +3.96% | -4.00% / -5.01% |
-| Funding-filtered breakout/retest | 2 | -1.22% / -2.99% | +1.29% / +0.35% | -4.48% / -5.39% |
-| Funding-filtered breakout/retest | 3 | -0.75% / -2.04% | +1.52% / +0.78% | -3.56% / -4.08% |
-| Funding-filtered breakout/retest | 4 | -0.63% / -1.64% | +1.25% / +0.65% | -2.94% / -3.30% |
-
-One position remains the best total-period choice. More simultaneous positions lower the funding-era result; the apparent smaller drawdown for 3–4 slots comes with substantially lower returns. No tested allocation breached 2× observed notional exposure. Daily/weekly loss thresholds and drawdown stops currently halt new entries in the shared engine; open positions are not forcibly liquidated at the threshold, so those controls are not a hard guarantee against gap losses.
-
-## Reproducibility and next experiment
-
-On Python 3.11+, from the repo root:
-
-```bash
-python -m src.audit_data
-python -m src.funding_crowding_screen
-python -m src.hybrid_regime_screen
-python -m src.volatility_compression_screen
-python -m src.shared_risk_concurrency_screen
-python -m src.analyze_funding_filter
-python -m src.plot_research_results
-```
-
-Every script writes its fixed configuration through code, SHA-256 hashes of input series and strategy code, metrics JSON, trade ledger and equity curve under `results/`. The raw price/funding series and their manifests are retained in `data/raw/`.
-
-**Next:** do not tune the current 2 bp threshold on the screened holdout. Verify the Kraken funding field timing and economics from the exchange documentation, then pre-register the next test against a genuinely future holdout; obtain mark-price / order-book data or keep execution claims explicitly provisional. Any paper promotion requires a longer forward sample and stricter hard-stop behavior.
+- [Kraken Futures funding rate history export](https://support.kraken.com/articles/360022835771-funding-rate)
+- [Kraken Futures change to hourly funding](https://support.kraken.com/articles/360022635232-funding-rate-changes)
+- [Kraken Futures contract specifications and trading fees](https://support.kraken.com/articles/360022835451-contract-specifications)
