@@ -187,3 +187,19 @@ Bollinger alone added about 0.53 percentage points baseline and 0.68 points unde
 This is consistent with the broader caution that technical-rule profitability is sensitive to transaction costs, while volume-price relationships are not a sufficient standalone confirmation. [Technical rules and transaction costs](https://www.sciencedirect.com/science/article/pii/S1042443122000816); [trend/volume relationship study](https://link.springer.com/article/10.1007/s40822-021-00166-5).
 
 Reproduce with `python -m src.indicator_confirmation_screen`. Metrics include fixed rule definitions and code/data hashes; trade logs, hourly equity and daily-sampled equity exports are written to `results/indicator_confirmation_*`.
+
+## Intraday mean-reversion screen: Bollinger + RSI (2026-11-02)
+
+To address the request for an intraday strategy, I tested a fixed 1h contrarian setup across BTC, ETH, SOL and XRP: fade a close outside BB(20,2) when RSI(14) is below 30 (long) or above 70 (short), only in the matching 4h EMA50/EMA200 trend. Enter at the next hourly open; target the BB middle at the signal close; initial stop 1.5 ATR; maximum hold 24 hours. Portfolio constraints were one global open position, 0.25% equity risk per trade, 0.75× notional cap, and daily/weekly/drawdown entry gates. The baseline charged 5 bp per side plus 1.5 bp spread/slippage per side; stress charged 3.75 bp spread/slippage per side. Funding used the observed hourly series. Initial simulated capital was $900; no live orders were sent.
+
+| Period | Cost case | Net return | Net P&L | Max DD | Trades | Profit factor | Weeks at/above +4% |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Funding-era full sample, 2025-10-30–2026-11-02 | Baseline | -3.94% | -$35.47 | -6.02% | 165 | 0.84 | 0 / 53 |
+| Funding-era full sample | Stress | -5.89% | -$53.00 | -6.11% | 157 | 0.74 | 0 / 53 |
+| WF1, 2025-10-30–2026-02-01 | Baseline / stress | +0.84% / -0.58% | — | -1.58% / -1.58% | 36 / 36 | 1.18 / 0.88 | 0 / 14 |
+| WF2, 2026-02-01–2026-05-22 | Baseline / stress | -1.01% / -1.62% | — | -2.38% / -2.42% | 51 / 52 | 0.87 / 0.79 | 0 / 17 |
+| Final window (already screened), 2026-05-22–2026-11-02 | Baseline / stress | -3.77% / -5.37% | — | -5.24% / -6.04% | 78 / 76 | 0.69 / 0.55 | 0 / 24 |
+
+**Decision: reject this strategy.** It loses after the modeled costs, deteriorates in stress, and fails both chronological folds and the already-screened final window. It does not approach the requested 4% weekly threshold. The sample is approximately one funding-history year, not three independent years; the broader candle archive does not make funding/execution validation equally long. This negative test is useful evidence, not a reason to increase leverage, position count or risk.
+
+Reproduce with `python -m src.intraday_reversion_screen`. The script and `results/intraday_reversion_metrics.json` include code/data hashes, frozen parameters, walk-forward/stress metrics, trades and equity outputs. Funding-era hourly coverage was 99.94%; one held hour had missing funding and is recorded in the metrics.
