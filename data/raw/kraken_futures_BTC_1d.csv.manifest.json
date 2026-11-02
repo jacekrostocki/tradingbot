@@ -1,0 +1,19 @@
+{
+  "venue": "Kraken Futures",
+  "market": "linear perpetual",
+  "asset": "BTC",
+  "symbol": "PF_XBTUSD",
+  "interval": "1d",
+  "rows": 1096,
+  "first_ms": 1698883200000,
+  "last_ms": 1793491200000,
+  "expected_step_seconds": 86400,
+  "missing_intervals": 0,
+  "first_gaps_ms": [],
+  "sha256": "0e59375ea5fc8d0d164ba7da8649292c94a3c2f9ad72b22715a79cd60ca0d474",
+  "downloaded_at_utc": "2026-11-02T12:38:52.269902+00:00",
+  "endpoint": "https://futures.kraken.com/api/charts/v1/trade/{symbol}/{resolution}",
+  "notes": "Public chart data; trade OHLCV is not mark/index data. Verify gaps and feed semantics before interpreting backtest.",
+  "requested_start_ms": 1793491200000,
+  "requested_end_ms": 1793620800000
+}

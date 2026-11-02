@@ -1,0 +1,98 @@
+# Strategy config v1.0 — RESEARCH ONLY. NOT FOR LIVE TRADING.
+version: "1.0.0"
+as_of: "2026-11-01"
+status: "research_candidate_not_backtested"
+
+runtime:
+  mode: "BACKTEST"              # BACKTEST | PAPER | DEMO | LIVE
+  live_enabled: false
+  require_manual_live_approval: true
+  timezone: "UTC"
+  fail_closed: true
+
+venue:
+  preferred: "kraken_futures"
+  market_type: "linear_perpetual"
+  instruments: ["BTC"]          # discover real exchange symbol dynamically
+  collateral_wallet: "isolated_margin"
+  margin_isolated_required: true
+  leverage_max: 2.0
+  adapter_interface: true
+  alternate: "spot_exchange_adapter"
+
+strategy:
+  id: "trend_donchian_4h_1h"
+  signal_on_closed_candles_only: true
+  trend_interval: "4h"
+  signal_interval: "1h"
+  execution_interval: "next_available_tick"
+  ema_fast: 50
+  ema_slow: 200
+  breakout_lookback_completed_bars: 24
+  atr_interval: "1h"
+  atr_period: 14
+  initial_stop_atr_multiple: 2.0
+  exit_model: "trailing_candidate"
+  trailing:
+    activation_profit_R: 1.0
+    chandelier_atr_multiple: 3.0
+    stop_never_widens: true
+  no_new_trade_if_feed_degraded: true
+  adx_filter_enabled: false
+  volume_filter_enabled: false
+  spread_filter_threshold_bps: null   # calibrate on train sample
+  funding_filter_threshold: null      # calibrate on train sample
+  prohibit_pyramiding: true
+  prohibit_averaging_down: true
+
+risk:
+  max_risk_per_trade_backtest_paper_fraction: 0.0025
+  max_risk_per_trade_initial_live_fraction: 0.001
+  max_concurrent_positions: 1
+  max_notional_to_equity_ratio: 0.75
+  max_account_leverage: 2.0
+  max_daily_drawdown_fraction: 0.01
+  max_weekly_drawdown_fraction: 0.03
+  max_peak_to_trough_drawdown_fraction: 0.06
+  no_martingale: true
+  no_automatic_margin_topup: true
+  halt_if_unprotected_position: true
+  halt_if_exchange_account_inconsistent: true
+  margin_safety_buffer_required: true
+
+execution:
+  model_entry: "taker_conservative"
+  model_exit: "taker_conservative"
+  require_fill_confirmation: true
+  require_exchange_hosted_reduce_only_stop: true
+  stop_type: "stop_market"
+  stop_trigger: "mark"
+  use_exchange_dead_mans_switch: false  # review: may cancel protective stops
+  require_idempotent_client_order_ids: true
+  require_rest_ws_reconciliation: true
+  partial_fills_supported: true
+
+costs:
+  maker_fee_fraction_per_side: 0.0002
+  taker_fee_fraction_per_side: 0.0005
+  baseline_round_trip_execution_friction_fraction: 0.0006
+  stress_round_trip_execution_friction_fraction: 0.0015
+  include_historical_funding: true
+  include_collateral_conversion_costs: true
+  charge_fees_on_notional: true
+
+validation:
+  target_history_years: 3
+  strict_walk_forward: true
+  untouched_final_holdout_required: true
+  all_costs_required: true
+  verify_execution_after_signal: true
+  evaluate_bootstrap_uncertainty: true
+  profit_factor_target_oos: 1.20
+  paper_duration_weeks_min: 8
+  paper_duration_weeks_initial_max: 12
+  parameter_grid_preregistered:
+    breakout_lookback_bars: [20, 24, 30]
+    atr_stop_multiple: [1.5, 2.0, 2.5]
+    chandelier_multiple: [2.5, 3.0, 3.5]
+  go_live_only_after_written_review: true

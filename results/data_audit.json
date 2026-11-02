@@ -1,0 +1,134 @@
+[
+  {
+    "file": "kraken_futures_BTC_1h.csv",
+    "rows": 26316,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_BTC_4h.csv",
+    "rows": 6579,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_BTC_1d.csv",
+    "rows": 1096,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_BTC_funding_1h.csv",
+    "rows": 8830,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 5,
+    "coverage_fraction": 0.335525,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_ETH_1h.csv",
+    "rows": 26316,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_ETH_4h.csv",
+    "rows": 6579,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_ETH_1d.csv",
+    "rows": 1096,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_ETH_funding_1h.csv",
+    "rows": 8830,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 5,
+    "coverage_fraction": 0.335525,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_SOL_1h.csv",
+    "rows": 26316,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_SOL_4h.csv",
+    "rows": 6579,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_SOL_1d.csv",
+    "rows": 1096,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_SOL_funding_1h.csv",
+    "rows": 8830,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 5,
+    "coverage_fraction": 0.335525,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_XRP_1h.csv",
+    "rows": 26316,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_XRP_4h.csv",
+    "rows": 6579,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_XRP_1d.csv",
+    "rows": 1096,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 0,
+    "status": "PASS"
+  },
+  {
+    "file": "kraken_futures_XRP_funding_1h.csv",
+    "rows": 8830,
+    "sha256_matches": true,
+    "manifest_rows_match": true,
+    "missing_intervals": 5,
+    "coverage_fraction": 0.335525,
+    "status": "PASS"
+  }
+]

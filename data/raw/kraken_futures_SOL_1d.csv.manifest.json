@@ -1,0 +1,19 @@
+{
+  "venue": "Kraken Futures",
+  "market": "linear perpetual",
+  "asset": "SOL",
+  "symbol": "PF_SOLUSD",
+  "interval": "1d",
+  "rows": 1096,
+  "first_ms": 1698883200000,
+  "last_ms": 1793491200000,
+  "expected_step_seconds": 86400,
+  "missing_intervals": 0,
+  "first_gaps_ms": [],
+  "sha256": "8b625e90319ff65aae2dfe3626a7bacc9b211ed51f15a5fbda18a541905c6a7e",
+  "downloaded_at_utc": "2026-11-02T12:39:23.075374+00:00",
+  "endpoint": "https://futures.kraken.com/api/charts/v1/trade/{symbol}/{resolution}",
+  "notes": "Public chart data; trade OHLCV is not mark/index data. Verify gaps and feed semantics before interpreting backtest.",
+  "requested_start_ms": 1793491200000,
+  "requested_end_ms": 1793620800000
+}

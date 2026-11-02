@@ -1,0 +1,19 @@
+{
+  "venue": "Kraken Futures",
+  "market": "linear perpetual",
+  "asset": "ETH",
+  "symbol": "PF_ETHUSD",
+  "interval": "1h",
+  "rows": 26316,
+  "first_ms": 1698883200000,
+  "last_ms": 1793617200000,
+  "expected_step_seconds": 3600,
+  "missing_intervals": 0,
+  "first_gaps_ms": [],
+  "sha256": "2c7fa1d79ed18757a16634a2815dbcae2f9f114e6d31cde9e70a4e0dd016cfd6",
+  "downloaded_at_utc": "2026-11-02T12:38:58.031707+00:00",
+  "endpoint": "https://futures.kraken.com/api/charts/v1/trade/{symbol}/{resolution}",
+  "notes": "Public chart data; trade OHLCV is not mark/index data. Verify gaps and feed semantics before interpreting backtest.",
+  "requested_start_ms": 1793617200000,
+  "requested_end_ms": 1793620800000
+}

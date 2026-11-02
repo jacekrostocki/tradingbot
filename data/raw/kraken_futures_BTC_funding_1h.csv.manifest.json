@@ -1,0 +1,44 @@
+{
+  "venue": "Kraken Futures",
+  "market": "linear perpetual",
+  "asset": "BTC",
+  "symbol": "PF_XBTUSD",
+  "interval": "funding_1h",
+  "rows": 8830,
+  "first_ms": 1761814800000,
+  "last_ms": 1793620800000,
+  "expected_step_seconds": 3600,
+  "missing_intervals": 5,
+  "first_gaps_ms": [
+    [
+      1762009200000,
+      1762020000000
+    ],
+    [
+      1762052400000,
+      1762059600000
+    ],
+    [
+      1763524800000,
+      1763532000000
+    ],
+    [
+      1764835200000,
+      1764842400000
+    ],
+    [
+      1770202800000,
+      1770210000000
+    ]
+  ],
+  "sha256": "193a07d252a24ecfc746bbd46b7663954ba7f641b4121bb8320db6d52a8d210c",
+  "downloaded_at_utc": "2026-11-02T12:38:12.357394+00:00",
+  "endpoint": "https://futures.kraken.com/derivatives/api/v4/historicalfundingrates",
+  "notes": "Public chart data; trade OHLCV is not mark/index data. Verify gaps and feed semantics before interpreting backtest.",
+  "requested_start_ms": 1698883200000,
+  "requested_end_ms": 1793620800000,
+  "requested_hour_count": 26317,
+  "hour_count_covered": 8830,
+  "coverage_fraction": 0.335525,
+  "coverage_limitation": "Kraken public endpoint returned only its retained history; pre-coverage funding is unavailable"
+}

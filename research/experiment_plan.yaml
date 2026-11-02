@@ -1,0 +1,52 @@
+schema_version: 1
+status: research_only_no_live_execution
+as_of_utc: 2026-11-02T12:00:00Z
+initial_equity_usd: 900
+assets: [BTC, ETH, SOL, XRP]
+market: Kraken Futures linear perpetuals
+source_candles: Kraken public Futures trade chart API
+history: 2023-11-02 through 2026-11-01, UTC
+bar_intervals: [1h, 4h, 1d]
+funding_source: Kraken public historical funding rates, relativeFundingRate
+funding_limitation: Only recent history is returned; experiment metadata flags any uncovered period.
+execution_assumptions:
+  signal: closed 1h bar
+  entry: next 1h open
+  exit: next available modeled bar price
+  fee_per_side_fraction: 0.0005
+  baseline_spread_per_side_fraction: 0.00015
+  baseline_slippage_per_side_fraction: 0.00015
+  stress_spread_per_side_fraction: 0.000375
+  stress_slippage_per_side_fraction: 0.000375
+  position_cap_to_equity: 0.75
+risk:
+  risk_budget_per_trade_fraction: 0.0025
+  atr_period_1h: 14
+  initial_stop_atr_multiple: 2.0
+  max_concurrent_positions_per_experiment_asset: 1
+  max_daily_drawdown_fraction: 0.01
+  max_weekly_drawdown_fraction: 0.03
+  max_peak_drawdown_fraction: 0.06
+  no_pyramiding: true
+  no_martingale: true
+strategies:
+  - trend_donchian: 4h EMA50/EMA200 trend filter, 1h close breaks prior 24-bar high/low.
+  - momentum_structure: 4h trend filter, 1h EMA20/momentum plus higher-low/lower-high structure.
+  - breakout_retest: 4h trend filter, prior 24-bar boundary break followed by retest and close back beyond level.
+  - ema_pullback: 4h trend filter, 1h close recrosses EMA20 after pullback.
+chronological_windows:
+  train: [0.00, 0.55]
+  validation: [0.55, 0.65]
+  walk_forward_1: [0.65, 0.70]
+  walk_forward_2: [0.70, 0.75]
+  walk_forward_3: [0.75, 0.80]
+  walk_forward_4: [0.80, 0.85]
+  final_holdout: [0.85, 1.00]
+holdout_policy: Never tune parameters or select the winning strategy using final_holdout results.
+known_limitations:
+  - Historical funding coverage is incomplete over the three-year candle history; uncovered hours are explicitly counted.
+  - Trade OHLC is not mark/index price. Stop trigger behavior is approximated from traded candles.
+  - OHLC does not model order-book depth, queue priority, partial fills, market impact, liquidation, or margin conversion.
+  - Historical contract listing, tick size, quantity increment and exact historical fee tier are not reconstructed.
+  - Backtest results are screening evidence only and cannot prove future profitability.
+live_trading: disabled
