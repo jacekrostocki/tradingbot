@@ -22,7 +22,11 @@ def atr(rows,n=14):
     return out
 def load(asset):
     raw=ROOT/'data'/'raw'; h1=read(raw/f'kraken_futures_{asset}_1h.csv'); h4=read(raw/f'kraken_futures_{asset}_4h.csv')
-    funding_path=raw/f'kraken_futures_{asset}_funding_1h.csv'; funding={int(x['timestamp_ms']):float(x['funding_rate']) for x in read(funding_path)} if funding_path.exists() else {}
+    # Prefer the merged official historical export + current public API tail;
+    # retain the original raw API capture as fallback and provenance.
+    funding_path=ROOT/'data'/'processed'/f'kraken_futures_{asset}_funding_complete_1h.csv'
+    if not funding_path.exists(): funding_path=raw/f'kraken_futures_{asset}_funding_1h.csv'
+    funding={int(x['timestamp_ms']):float(x['funding_rate']) for x in read(funding_path)} if funding_path.exists() else {}
     for x in h1+h4:
         for k in ('timestamp_ms','open','high','low','close','volume'): x[k]=int(x[k]) if k=='timestamp_ms' else float(x[k])
     return h1,h4,funding
