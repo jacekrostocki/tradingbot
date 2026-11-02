@@ -27,6 +27,7 @@ def equity_plot(rows):
         r=[x for x in rows if x['strategy']==strategy and x['window']=='all_3y' and x['slots']=='1' and x['stress']==stress]
         if not r: continue
         r.sort(key=lambda x:int(x['timestamp_ms']))
+        r=r[::168]+([r[-1]] if r[-1] is not r[::168][-1] else [])
         ax.plot([dt(x['timestamp_ms']) for x in r],[float(x['adverse_mark_equity_usd']) for x in r],lw=1.25,color=color,label=label)
     ax.axhline(900,color='#555',lw=.8,ls='--')
     ax.set_title('Kraken Futures breakout/retest · 1 position · full 3y run')
@@ -34,7 +35,7 @@ def equity_plot(rows):
     ax.set_xlabel('UTC')
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=4));ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
     ax.grid(alpha=.2);ax.legend(ncol=2,frameon=False);fig.tight_layout()
-    fig.savefig(OUT/'equity_curve_1pos_3y.png',dpi=160);plt.close(fig)
+    fig.savefig(OUT/'equity_curve_1pos_3y.png',dpi=160);fig.savefig(OUT/'equity_curve_1pos_3y.svg');plt.close(fig)
 
 def week_bucket(d):
     day=d.date().toordinal();return day-day%7 # Monday-based ordinal bucket
@@ -61,7 +62,7 @@ def weekly_plot(rows):
     ax.axvline(0,color='#333',lw=.9);ax.axvline(3,color='#a11',lw=.9,ls='--',label='+3% weekly target')
     ax.set_title('Weekly adverse mark returns · screened final period · 1 position')
     ax.set_xlabel('Weekly return (%)');ax.set_ylabel('Number of weeks');ax.grid(axis='y',alpha=.2);ax.legend(frameon=False);fig.tight_layout()
-    fig.savefig(OUT/'weekly_pnl_distribution_1pos_screened.png',dpi=160);plt.close(fig)
+    fig.savefig(OUT/'weekly_pnl_distribution_1pos_screened.png',dpi=160);fig.savefig(OUT/'weekly_pnl_distribution_1pos_screened.svg');plt.close(fig)
 
 def main():
     OUT.mkdir(parents=True,exist_ok=True);rows=load();equity_plot(rows);weekly_plot(rows)
