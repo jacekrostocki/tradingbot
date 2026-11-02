@@ -108,3 +108,33 @@ As a concentration diagnostic, the 367 aligned daily return observations from th
 **Risk decision:** keep one open position as the research default. Do not raise stop-risk to 3–4% of equity across simultaneous trades; the tested versions violate the drawdown limit. If “3–4% per trade” means margin allocation, document it as margin/notional, not risk; the tested 3–4% allocation cases still did not improve net results. Revisit concurrency only after improving signal quality and evaluating a new untouched forward period. No candidate is promoted to paper/live.
 
 Reproduce this screen from the repository root with `python -m src.portfolio_concurrency`. It writes `results/portfolio_concurrency_metrics.json`, `results/portfolio_concurrency_trades.csv`, and `results/portfolio_concurrency_equity.csv`; metrics include code/data hashes and each scenario's planned aggregate stop-risk. The four data-store tests continue to pass.
+
+## Follow-up search: slower trend filters and retest ranges (2026-11-02)
+
+The earlier screens found that the 1h breakout/retest was the strongest candidate but generated 153 trades/year, was concentrated in ETH, and lost money in one chronological fold. I kept that 24h range as the benchmark and tested only two predeclared follow-ups: longer 72h/168h 1h breakout/retest ranges, and slower 4h entries filtered by a completed daily 50/200 EMA regime. The 4h entries were Donchian-20 breakout, breakout/retest-20, and EMA-20 pullback. These are exploratory screens on the same approximately one-year complete-funding window; the final interval had already been examined and is not a new independent holdout.
+
+| Candidate, full funding-era window | Baseline net return / PF / trades | Stress net return / PF / trades | Max drawdown baseline / stress |
+|---|---:|---:|---:|
+| 1h breakout/retest, 24h range (benchmark) | +4.76% / 1.23 / 153 | +1.38% / 1.07 / 156 | -4.11% / -4.95% |
+| 1h breakout/retest, 72h range | +1.01% / 1.09 / 88 | -0.09% / 0.99 / 88 | -4.79% / -4.98% |
+| 1h breakout/retest, 168h range | +0.73% / 1.09 / 57 | +0.13% / 1.02 / 57 | -4.34% / -4.47% |
+| 4h Donchian-20 + daily 50/200 regime | -2.50% / 0.65 / 45 | -2.69% / 0.62 / 45 | -3.23% / -3.34% |
+| 4h breakout/retest-20 + daily regime | -1.34% / 0.71 / 29 | -1.66% / 0.65 / 30 | -2.32% / -2.32% |
+| 4h EMA-20 pullback + daily regime | -2.37% / 0.74 / 65 | -2.62% / 0.70 / 65 | -3.52% / -3.72% |
+
+The longer retest ranges lowered trade count but did not improve net stress performance. All three slower 4h candidates lost money both before and after cost stress; each walk-forward fold was also negative for the 4h methods. This is a useful negative result: simply slowing the system or adding a daily trend filter did not reveal an edge in this sample. The 24h benchmark remains the least-bad candidate, but its thin stressed return and negative WF fold still do not qualify it as reliably profitable.
+
+This direction is consistent with the research motivation to test momentum/trend at multiple frequencies, while other studies emphasize that transaction costs can change the profitability of technical rules by asset and frequency. The evidence does not warrant importing a published result directly into this Kraken strategy. [Dynamic time-series momentum study](https://www.sciencedirect.com/science/article/pii/S1062940821000590); [technical rules and transaction costs study](https://www.sciencedirect.com/science/article/pii/S1042443122000816).
+
+### Current conclusion and next research gate
+
+**No reliable profitable strategy has been found yet.** Do not expand the indicator/parameter grid simply to search for a positive row: that would increase selection bias without fixing the short, previously screened funding sample. Keep the 24h breakout/retest as a benchmark hypothesis only; no live or paper promotion. The next useful research investment is execution/data quality (mark-price OHLC, historical bid/ask and slippage, complete or conservatively stressed funding) plus a frozen future paper period, rather than more tuning on the same holdout. A strategy must be positive net of stress costs in both walk-forward folds and a new untouched period while staying below the 6% drawdown limit before reconsideration.
+
+Reproduce the new screens from the repository root:
+
+```bash
+python -m src.retest_lookback_screen
+python -m src.slow_trend_screen
+```
+
+Outputs include code/data hashes, chronological fold metrics, complete trade ledgers and equity curves under `results/retest_lookback_*` and `results/slow_trend_*`.
