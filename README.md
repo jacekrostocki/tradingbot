@@ -10,9 +10,15 @@ Download a rolling 3+ year sample (public Kraken Futures trade candles and fundi
 python -m src.data_store --start 2023-11-02T00:00:00+00:00 --end 2026-11-02T12:00:00+00:00 --allow-gaps
 ```
 
-The downloader writes 12 OHLCV CSVs (BTC, ETH, SOL, XRP × 1h, 4h, 1d), four hourly funding CSVs, and SHA-256 manifests under `data/raw/`. `--allow-gaps` preserves and counts gaps in the manifest instead of stopping; inspect them before research. Refresh by rerunning with an updated `--end`; overlapping timestamps are deduplicated by the downloader's range assembly. By default the downloader fails on detected gaps. All API calls are public and unauthenticated.
+The downloader writes 12 OHLCV CSVs (BTC, ETH, SOL, XRP × 1h, 4h, 1d), a recent funding capture, and SHA-256 manifests under `data/raw/`. `--allow-gaps` preserves and counts gaps in the manifest instead of stopping; inspect them before research. Refresh by rerunning with an updated `--end`; overlapping timestamps are deduplicated by the downloader's range assembly. By default the downloader fails on detected gaps. All API calls are public and unauthenticated.
 
-Kraken's chart API timestamps are UTC milliseconds and the request parameters use epoch seconds. `trade` candles reflect executed-trade charts, not mark or index prices. Funding uses the public historical funding-rate endpoint's `relativeFundingRate` field. Kraken returned only recent funding history (about one year) with a handful of missing hours, so the older part of the three-year price archive is unfunded in the data. Experiments report coverage; only fully covered windows can be interpreted as net of funding. Gaps, contract history, rate field semantics, and incomplete current bars need review before treating results as execution-representative.
+Kraken's chart API timestamps are UTC milliseconds and the request parameters use epoch seconds. `trade` candles reflect executed-trade charts, not mark or index prices. To obtain a longer funding history, run:
+
+```bash
+python -m src.merge_funding_history
+```
+
+This downloads Kraken's official historical funding export and combines it with the recent public API capture. It writes full `funding_complete_1h.csv` series and manifests under `data/processed/`; the downloaded 110MB archive is ignored by Git. The current captured export reaches 1 Feb 2026; the public API supplies the later tail. All 2,243 overlapping hourly values matched exactly for each of BTC, ETH, SOL and XRP. The merge spans the entire candle history (2 Nov 2023–2 Nov 2026) with eight explicitly recorded missing funding hours per asset; missing values are not filled. Kraken changed from a 4-hour to a 1-hour funding calculation/settlement window on 29 Sep 2022, before this dataset begins. `src.backtest.load()` prefers merged funding when it exists, then falls back to the original raw API capture. `src.audit_data` validates both raw files and merged funding manifests.
 
 ## Research
 
@@ -29,4 +35,4 @@ Legacy Bybit summaries in `research/legacy_intraday_results.csv` are retained fo
 ## Reproducibility and safety
 
 Experiments save config, code hash, metrics, trade ledger, costs, split indices, and dataset manifests. Do not tune on the final chronological holdout. No API secrets belong in the repository. There is no live trading adapter, key handling, or order placement in this project.
-Current portfolio candidate screen and limitations: see [`research/RESEARCH_REPORT.md`](research/RESEARCH_REPORT.md), with reproducible engine `src/portfolio_momentum.py` and outputs `results/portfolio_momentum_metrics.json`, `results/portfolio_momentum_trades.csv`, `results/portfolio_momentum_equity.csv`. Current status remains research-only / NO-GO for deployment.
+Latest data-audited iteration and limitations: see [`research/ITERATION_REPORT_2026-11-02.md`](research/ITERATION_REPORT_2026-11-02.md). Full-history screens are reproduced with `python -m src.backtest --assets BTC ETH SOL XRP --output results/full_history_individual` and `python -m src.full_history_portfolio_screen`. Current status remains research-only / NO-GO for deployment.
