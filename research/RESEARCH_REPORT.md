@@ -169,3 +169,21 @@ python -m src.long_only_stop_screen
 ```
 
 The two scripts save parameterized metrics with code/data hashes, trade ledgers and equity curves under `results/filter_hypothesis_*` and `results/long_only_stop_*`. The filter screen also writes a daily-sampled equity export, which is the compact curve archived to GitHub.
+
+## Indicator confirmation test: Bollinger Bands, RSI and OBV (2026-11-02)
+
+On the frozen long-only 1h breakout/retest lead, I tested conventional, fixed confirmations without tuning: BB(20,2) requires the prior completed hourly close to finish above its 20-period SMA + 2 population standard deviations; RSI uses Wilder(14) and must be at least 50 at the retest close; OBV must be higher than five bars earlier. The combined variant requires all three. All cases retain the same one-position, 0.25%-risk, next-hour entry, stops, fee, spread/slippage and observed funding model.
+
+| Variant | Full funding-era baseline | Stress | DD baseline / stress | Trades base / stress |
+|---|---:|---:|---:|---:|
+| Long-only lead | +4.15%, PF 1.50 | +2.02%, PF 1.23 | -2.06% / -2.45% | 60 / 63 |
+| + Bollinger confirmation | +4.68%, PF 1.61 | +2.70%, PF 1.33 | -2.20% / -2.42% | 57 / 60 |
+| + RSI(14) >= 50 | +4.15%, PF 1.50 | +2.02%, PF 1.23 | -2.06% / -2.45% | 60 / 63 |
+| + OBV rising over 5 bars | +3.71%, PF 1.43 | +1.46%, PF 1.16 | -2.06% / -2.44% | 60 / 63 |
+| + Bollinger + RSI + OBV | +4.24%, PF 1.53 | +2.14%, PF 1.25 | -2.20% / -2.42% | 57 / 60 |
+
+Bollinger alone added about 0.53 percentage points baseline and 0.68 points under stress relative to the long-only lead, with virtually unchanged drawdown. But it did not pass the stability check: WF1 remained -0.16% (five trades), WF2 was +0.11% baseline and -0.58% under stress, and the later +4.73% baseline window was already screened. RSI filtered no trades: every selected long signal already had RSI >= 50. OBV reduced the return, and adding RSI/OBV to Bollinger diluted its full-period gain. Therefore **Bollinger is a candidate confirmation to freeze for future paper observation, not evidence of a proven edge**. Do not tune its period or deviation multiplier on these same dates.
+
+This is consistent with the broader caution that technical-rule profitability is sensitive to transaction costs, while volume-price relationships are not a sufficient standalone confirmation. [Technical rules and transaction costs](https://www.sciencedirect.com/science/article/pii/S1042443122000816); [trend/volume relationship study](https://link.springer.com/article/10.1007/s40822-021-00166-5).
+
+Reproduce with `python -m src.indicator_confirmation_screen`. Metrics include fixed rule definitions and code/data hashes; trade logs, hourly equity and daily-sampled equity exports are written to `results/indicator_confirmation_*`.
