@@ -138,3 +138,34 @@ python -m src.slow_trend_screen
 ```
 
 Outputs include code/data hashes, chronological fold metrics, complete trade ledgers and equity curves under `results/retest_lookback_*` and `results/slow_trend_*`.
+
+## Follow-up search: side, volume and stop-width hypotheses (2026-11-02)
+
+The current 1h breakout/retest trade ledger shows why a side filter merited a controlled test: in the all-sides baseline, 59 long trades contributed +$37.74 net while 94 short trades contributed +$5.08, after fees/funding. This is a result from the tested sample, not a universal claim about crypto shorts. I tested a predeclared long-only version, a 1.5× prior-24h average volume confirmation, a BTC 4h trend-direction gate, and long-only plus the volume gate. All retain one global position, 0.25% equity stop risk and the same transaction-cost/funding assumptions.
+
+| Variant | Funding-era baseline | Stress | Baseline / stress max drawdown |
+|---|---:|---:|---:|
+| All sides (benchmark) | +4.76%, PF 1.23, 153 trades | +1.38%, PF 1.07, 156 trades | -4.11% / -4.95% |
+| Long-only | +4.15%, PF 1.50, 60 trades | +2.02%, PF 1.23, 63 trades | -2.06% / -2.45% |
+| Volume >= 1.5× prior 24h mean | -0.41%, PF 0.97, 112 trades | -2.16%, PF 0.86, 114 trades | -4.62% / -5.29% |
+| Require direction to agree with BTC 4h regime | +1.16%, PF 1.07, 130 trades | -1.28%, PF 0.93, 133 trades | -2.85% / -4.36% |
+| Long-only + volume confirmation | +0.38%, PF 1.05, 46 trades | -0.84%, PF 0.89, 48 trades | -2.26% / -2.72% |
+
+Long-only is the best new research candidate so far: it lowered turnover and drawdown while improving the full-window result. But the first and second walk-forward folds were both negative: -0.16% and -0.13% baseline (the first fold had just five trades); stress was -0.20% and -0.82%. The later screened window was positive but is not independent. The long-only full-window result also remained ETH-heavy: ETH contributed +$43.64, while BTC contributed -$13.30; SOL and XRP were close to flat. It therefore remains a hypothesis, not a validated strategy.
+
+I also compared the long-only version at 2×ATR and 3×ATR initial stops while holding the 0.25% per-trade risk budget constant. The wider 3×ATR stop reduced full-window return to +2.31% baseline / +1.05% stress, with a 1.91% drawdown; both walk-forward folds remained negative. It did not improve returns enough to replace 2×ATR.
+
+Volume was a plausible filter because published work studies return/volume links, but its empirical relationship is mixed and implementation costs vary by coin and rule. Published momentum evidence also differs on whether returns come from long or short legs. Our ledger motivated the long-only test; it cannot establish that the same effect will persist. [Trend and volume in Bitcoin](https://link.springer.com/article/10.1007/s40822-021-00166-5); [transaction costs and technical rules](https://www.sciencedirect.com/science/article/pii/S1042443122000816); [economic constraints on crypto anomalies](https://doi.org/10.1016/j.irfa.2024.103218).
+
+### Updated decision
+
+**No reliably profitable strategy has cleared the evidence bar.** Keep long-only 1h breakout/retest with a 2×ATR initial stop and 0.25% risk as the current lead *for research tracking only*. Its net stress return (+2.02% over the funding-era year) is promising relative to prior variants, but its two chronological folds are negative and the later positive period was already screened. Do not promote it to paper/live or increase risk. Freeze this version; obtain a genuinely new forward sample and better mark-price/execution data before testing further rule changes. The aim is to avoid selecting a positive-looking result from repeated searches on the same history.
+
+Reproduce from repository root:
+
+```bash
+python -m src.hypothesis_filter_screen
+python -m src.long_only_stop_screen
+```
+
+The two scripts save parameterized metrics with code/data hashes, trade ledgers and equity curves under `results/filter_hypothesis_*` and `results/long_only_stop_*`. The filter screen also writes a daily-sampled equity export, which is the compact curve archived to GitHub.
