@@ -86,3 +86,25 @@ python -m src.audit_data
 - Hudson & Urquhart (2021), *Technical trading and cryptocurrencies*: out-of-sample predictability varied by coin, with no Bitcoin predictability in their tested OOS period. [Springer](https://doi.org/10.1007/s10479-019-03357-1).
 - *Dynamic time series momentum of cryptocurrencies* (2021): examines time-series momentum at multiple data frequencies; this motivates testing a slower momentum filter but does not validate this implementation. [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S1062940821000590).
 - Bailey et al., *The Probability of Backtest Overfitting*: repeated candidate selection raises the risk of selecting a spurious winner. [UC eScholarship](https://escholarship.org/uc/item/4w1110bb).
+
+## Concurrent-position and 3–4% budget sensitivity (2026-11-02)
+
+The next experiment keeps the breakout/retest signals and 30-day cross-asset rank fixed, but allows one, two, or four simultaneous positions. It caps each coin at one open position, ranks same-hour candidates by momentum, sizes each from distance to stop, and retains the daily -1%, weekly -3% and peak-drawdown -6% **new-entry halts**. Costs and funding are charged as in the prior screen. The peak/daily/weekly thresholds stop new entries; they do not forcibly liquidate positions already open, so realized adverse drawdown can exceed the threshold.
+
+| Position / sizing case | Full funding-era baseline | Stress costs | Peak drawdown baseline / stress |
+|---|---:|---:|---:|
+| 1 position, 0.25% equity risk to stop | +4.76%, PF 1.23, 153 trades | +1.38%, PF 1.07, 156 trades | -4.11% / -4.95% |
+| 2 positions, 0.25% risk each (0.5% max planned combined) | -3.41%, PF 0.58, 53 trades | -3.65%, PF 0.54, 53 trades | -6.07% / -6.09% |
+| 4 positions, 0.25% risk each (1% combined) | -2.73%, PF 0.68, 59 trades | -3.08%, PF 0.63, 59 trades | -6.15% / -6.26% |
+| 4 positions, 0.75% risk each (3% combined) | +4.12%, PF 1.41, 31 trades | +2.89%, PF 1.29, 31 trades | -6.94% / -6.56% |
+| 4 positions, 1.00% risk each (4% combined) | +3.14%, PF 1.22, 28 trades | +6.15%, PF 1.68, 23 trades | -9.68% / -7.06% |
+| 4 positions, 3% of equity allocated as margin each, max 2× leverage; stop risk still capped at 0.25% each | -4.64%, PF 0.66, 175 trades | -4.93%, PF 0.64, 167 trades | -6.04% / -6.24% |
+| 4 positions, 4% of equity allocated as margin each, max 2× leverage; stop risk still capped at 0.25% each | -4.20%, PF 0.47, 70 trades | -4.48%, PF 0.44, 70 trades | -6.03% / -6.19% |
+
+**Interpretation:** allowing more positions did not reliably capture profitable opportunities. At the conservative 0.25% stop-risk budget, two and four slots lost money and reached the drawdown gate; the trade-entry halt then reduced subsequent activity. The 3–4% aggregate stop-risk cases had positive returns in this sample, but breached the configured 6% peak-drawdown threshold in both baseline and stress, and the 4% case reached -9.68% baseline. They fail the capital-protection objective. The 3–4% *margin allocation* cases are a different, much smaller risk exposure (3–4% margin per position, up to 2× notional; stop risk remains capped), and both lost around 4–5% net. Neither interpretation supports increasing the live budget.
+
+As a concentration diagnostic, the 367 aligned daily return observations from the funding-era window show pairwise BTC/ETH/SOL/XRP close-return correlations from **0.825 to 0.908**. This is a historical sample statistic, not a stable future constant, but it explains why four open alt/crypto positions can behave like one larger directional bet. Research also finds crypto correlations and diversification benefits vary across assets and time scales. [CME's four-asset study](https://www.cmegroup.com/articles/2025/diversifying-crypto-portfolios-with-xrp-and-sol.html); [hourly/daily spillover study](https://doi.org/10.1016/j.econmod.2024.106728).
+
+**Risk decision:** keep one open position as the research default. Do not raise stop-risk to 3–4% of equity across simultaneous trades; the tested versions violate the drawdown limit. If “3–4% per trade” means margin allocation, document it as margin/notional, not risk; the tested 3–4% allocation cases still did not improve net results. Revisit concurrency only after improving signal quality and evaluating a new untouched forward period. No candidate is promoted to paper/live.
+
+Reproduce this screen from the repository root with `python -m src.portfolio_concurrency`. It writes `results/portfolio_concurrency_metrics.json`, `results/portfolio_concurrency_trades.csv`, and `results/portfolio_concurrency_equity.csv`; metrics include code/data hashes and each scenario's planned aggregate stop-risk. The four data-store tests continue to pass.
