@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "raw"
 BASE = "https://futures.kraken.com/api/charts/v1"
 SYMBOLS = {"BTC":"PF_XBTUSD", "ETH":"PF_ETHUSD", "SOL":"PF_SOLUSD", "XRP":"PF_XRPUSD"}
-INTERVALS = {"1h":3600, "4h":14400, "1d":86400}
+INTERVALS = {"5m":300, "1h":3600, "4h":14400, "1d":86400}
 FIELDS = ["timestamp_ms","open","high","low","close","volume"]
 
 def epoch(s: str) -> int:
@@ -80,7 +80,7 @@ def validate(rows, step_s, label, allow_gaps=False):
 def save_csv(path, rows, fields):
     path.parent.mkdir(parents=True,exist_ok=True); tmp=path.with_suffix(path.suffix+".tmp")
     with tmp.open("w",newline="",encoding="utf-8") as f:
-        w=csv.DictWriter(f,fieldnames=fields); w.writeheader(); w.writerows(rows)
+        w=csv.DictWriter(f,fieldnames=fields,lineterminator="\n"); w.writeheader(); w.writerows(rows)
     os.replace(tmp,path)
 
 def manifest(path, rows, venue, asset, interval, step_s, gaps):
