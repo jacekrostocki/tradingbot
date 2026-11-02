@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""Fixed regime-switch hypothesis: breakout/retest in trends, BB/RSI MR in neutral regime.
+
+Research only. Uses Kraken Futures trade candles and observed hourly funding.
+One portfolio position at a time; no parameter search is performed here.
+"""
+from __future__ import annotations
+import csv, datetime as dt, hashlib, json, math, statistics
+from pathlib import Path
+from .backtest import ROOT, atr, ema, load, signals, trend_filter
+
+ASSETS=('BTC','ETH','SOL','XRP')
+INITIAL=900.0; RISK=.0025; NOTIONAL_CAP=.75
+FEE=.0005; BASE_FRICTION=.0003; STRESS_FRICTION=.00075
+DAILY_STOP=-.01; WEEKLY_STOP=-.03; DD_STOP=-.06
+WINDOWS=(('funding_era','2025-10-30T00:00:00Z','2026-11-02T00:00:00Z'),
+         ('wf_1','2025-10-30T00:00:00Z','2026-02-01T00:00:00Z'),
+         ('wf_2','2026-02-01T00:00:00Z','2026-05-22T00:00:00Z'),
+         ('final_holdout_screened','2026-05-22T00:00:00Z','2026-11-02T00:00:00Z'))
+HOUR=3_600_000
+
+def ms(s): return int(dt.datetime.fromisoformat(s.replace('Z','+00:00')).timestamp()*1000)
+def utc(t): return dt.datetime.fromtimestamp(t/1000,dt.timezone.utc).isoformat()
+
+def rsi_wilder(cl,n=14):
+    out=[None]*len(cl)
+    if len(cl)<=n:return out
+    g=sum(max(cl[i]-cl[i-1],0.) for i in range(1,n+1))/n
+    l=sum(max(cl[i-1]-cl[i],0.) for i in range(1,n+1))/n
+    out[n]=100. if l==0 else 100-100/(1+g/l)
+    for i in range(n+1,len(cl)):
+        d=cl[i]-cl[i-1];g=(g*(n-1)+max(d,0.))/n;l=(l*(n-1)+max(-d,0.))/n
+        out[i]=100. if l==0 else 100-100/(1+g/l)
+    return out
+
+def prep():
+    out={}
+    for a in ASSETS:
+        h1,h4,funding=load(a); cl=[x['close'] for x in h1]
+        atr1=atr(h1); trend=trend_filter(h1,h4); bbmid=[None]*len(cl); upper=[None]*len(cl); lower=[None]*len(cl)
+        rsi=rsi_wilder(cl); base_sig=signals(a,'breakout_retest')[3]
+        for i in range(19,len(cl)):
+            w=cl[i-19:i+1];m=sum(w)/20;sd=math.sqrt(sum((x-m)**2 for x in w)/20)
+            bbmid[i]=m;upper[i]=m+2*sd;lower[i]=m-2*sd
+        out[a]={'bars':h1,'atr':atr1,'trend':trend,'base_sig':base_sig,'fund':funding,'rsi':rsi,'mid':bbmid,'upper':upper,'lower':lower}
+    return out
+
+def candidates(data,i):
+    tr=[];mr=[]
+    for a,m in data.items():
+        b=m['bars'][i];side=m['base_sig'][i]
+        # Trend entry only when the established 4h regime agrees with breakout/retest.
+        if side and m['trend'][i]==side and m['atr'][i]:
+            cl=b['close'];prior=m['bars'][max(0,i-720)]['close']
+            mom=side*(cl/prior-1) if prior else 0
+            if mom>0:tr.append((mom,a,side))
+        # Countertrend trades are allowed only while 4h trend filter is explicitly neutral.
+        r=m['rsi'][i];
+        if m['trend'][i]==0 and r is not None and m['atr'][i] and m['mid'][i]:
+            if r<25 and b['close']<m['lower'][i]:
+                mr.append(((m['lower'][i]-b['close'])/m['atr'][i],a,1))
+            elif r>75 and b['close']>m['upper'][i]:
+                mr.append(((b['close']-m['upper'][i])/m['atr'][i],a,-1))
+    # Deterministic regime priority: confirmed trend setups take precedence; otherwise
+    # choose the most extended neutral-regime deviation in ATR units.
+    if tr:
+        score,a,s=max(tr)
+        return {'kind':'trend','asset':a,'side':s,'score':score}
+    if mr:
+        score,a,s=max(mr)
+        return {'kind':'range','asset':a,'side':s,'score':score}
+    return None
+
+def run(data,lo_ms,hi_ms,stress=False):
+    ts=data['BTC']['bars']; times=[x['timestamp_ms'] for x in ts]
+    lo=next(i for i,t in enumerate(times) if t>=lo_ms);hi=next((i for i,t in enumerate(times) if t>=hi_ms),len(times))
+    fr=STRESS_FRICTION if stress else BASE_FRICTION
+    eq=INITIAL;peak=INITIAL;dd=0.;pos=None;trades=[];curve=[];funded=missing=0;day0=week0=INITIAL;day_id=week_id=None;halt=False
+    for i in range(max(lo,220),min(hi,len(times)-1)):
+        t=times[i];day=t//86_400_000;week=t//(7*86_400_000)
+        if day!=day_id:day_id=day;day0=eq
+        if week!=week_id:week_id=week;week0=eq
+        if pos:
+            m=data[pos['asset']];b=m['bars'][i];rate=m['fund'].get(t)
+            if rate is None:missing+=1;pos['missing_funding']+=1
+            else:funded+=1;pos['funding']+=-pos['side']*rate*pos['qty']*pos['entry']
+            hit=b['low']<=pos['stop'] if pos['side']==1 else b['high']>=pos['stop']
+            px=None;reason=''
+            if hit:px=pos['stop'];reason='stop'
+            elif pos['kind']=='trend':
+                if m['trend'][i]==-pos['side']:px=b['open'];reason='trend_flip'
+                else:
+                    fav=b['high']-pos['entry'] if pos['side']==1 else pos['entry']-b['low']
+                    if fav>=pos['risk_dist']:pos['trail_active']=True
+                    if pos['trail_active']:
+                        candidate=(pos['extreme']-3*m['atr'][i] if pos['side']==1 else pos['extreme']+3*m['atr'][i])
+                        pos['stop']=max(pos['stop'],candidate) if pos['side']==1 else min(pos['stop'],candidate)
+                    pos['extreme']=max(pos['extreme'],b['high']) if pos['side']==1 else min(pos['extreme'],b['low'])
+                    if i-pos['entry_i']>=72:px=b['close'];reason='trend_time_stop_72h'
+            else:
+                if b['high']>=pos['target'] if pos['side']==1 else b['low']<=pos['target']:
+                    px=pos['target'];reason='bb_mid_target'
+                elif m['trend'][i]!=0:px=b['open'];reason='trend_regime_return'
+                elif i-pos['entry_i']>=24:px=b['close'];reason='range_time_stop_24h'
+            if px is not None:
+                out=px*(1-fr*pos['side']);gross=pos['side']*(out-pos['entry'])*pos['qty'];fees=pos['qty']*(pos['entry']+out)*FEE
+                net=gross-fees+pos['funding'];eq+=net;pos.update(exit_ms=t,exit=out,gross=gross,fees=fees,net=net,reason=reason,equity=eq);trades.append(pos);pos=None
+        mark=eq
+        if pos:
+            b=data[pos['asset']]['bars'][i];adverse=b['low'] if pos['side']==1 else b['high']
+            mark+=pos['side']*(adverse-pos['entry'])*pos['qty']-pos['qty']*(pos['entry']+adverse)*FEE+pos['funding']
+        peak=max(peak,mark);dd=min(dd,mark/peak-1)
+        if mark/peak-1<=DD_STOP:halt=True
+        if pos is None and not halt and i<hi-1 and mark/day0-1>DAILY_STOP and mark/week0-1>WEEKLY_STOP:
+            sig=candidates(data,i)
+            if sig:
+                m=data[sig['asset']];b=m['bars'][i];side=sig['side'];atrv=m['atr'][i]
+                entry=m['bars'][i+1]['open']*(1+fr*side)
+                dist=(2.0 if sig['kind']=='trend' else 1.5)*atrv
+                target=m['mid'][i]
+                if sig['kind']=='range' and not ((side==1 and target>entry) or (side==-1 and target<entry)):
+                    sig=None
+                if sig:
+                    risk_frac=dist/entry+2*(FEE+fr);notional=min(eq*NOTIONAL_CAP,eq*RISK/risk_frac)
+                    if notional>=10:
+                        pos={'kind':sig['kind'],'asset':sig['asset'],'side':side,'score':sig['score'],'signal_ms':t,'entry_ms':times[i+1],'entry_i':i+1,'entry':entry,'qty':notional/entry,'notional':notional,'stop':entry-side*dist,'risk_dist':dist,'target':target if sig['kind']=='range' else None,'extreme':entry,'trail_active':False,'funding':0.,'missing_funding':0}
+        curve.append({'timestamp_ms':t,'equity_usd':round(eq,6),'adverse_mark_equity_usd':round(mark,6),'open_asset':pos['asset'] if pos else '', 'open_kind':pos['kind'] if pos else ''})
+    if pos:
+        b=data[pos['asset']]['bars'][min(hi,len(times))-1];px=b['close']*(1-fr*pos['side']);gross=pos['side']*(px-pos['entry'])*pos['qty'];fees=pos['qty']*(pos['entry']+px)*FEE;net=gross-fees+pos['funding'];eq+=net;pos.update(exit_ms=b['timestamp_ms'],exit=px,gross=gross,fees=fees,net=net,reason='period_end',equity=eq);trades.append(pos)
+    wins=[x['net'] for x in trades if x['net']>0];loss=[x['net'] for x in trades if x['net']<=0];pf=sum(wins)/abs(sum(loss)) if loss and sum(loss) else ('inf' if wins else 0)
+    # Weekly adverse-mark PnL, with no rescaling of strategy risk.
+    byweek={}
+    for x in curve:byweek.setdefault(x['timestamp_ms']//(7*86_400_000),[]).append(x['adverse_mark_equity_usd'])
+    wr=[v[-1]/v[0]-1 for v in byweek.values() if v[0]>0]
+    return {'start_utc':utc(times[lo]),'end_utc':utc(times[min(hi,len(times)-1)]),'stress':stress,'initial_equity_usd':INITIAL,'final_equity_usd':round(eq,4),'net_return_fraction':round(eq/INITIAL-1,6),'net_pnl_usd':round(eq-INITIAL,4),'trade_count':len(trades),'trend_trades':sum(x['kind']=='trend' for x in trades),'range_trades':sum(x['kind']=='range' for x in trades),'profit_factor':round(pf,4) if isinstance(pf,float) else pf,'win_rate':round(len(wins)/len(trades),4) if trades else 0,'max_drawdown_fraction':round(dd,6),'fees_usd':round(sum(x['fees'] for x in trades),4),'funding_usd':round(sum(x['funding'] for x in trades),4),'funding_coverage_fraction':round(funded/max(funded+missing,1),6),'funding_missing_held_hours':missing,'weekly_return_mean':round(statistics.mean(wr),6) if wr else 0,'weekly_return_median':round(statistics.median(wr),6) if wr else 0,'weeks_ge_3pct':sum(x>=.03 for x in wr),'weeks_count':len(wr),'halted_at_6pct_dd':halt,'parameters':{'trend':'1h breakout/retest, 4h EMA50/200 direction, 2 ATR stop, 3 ATR trail after +1R, 72h time stop','range':'4h neutral, 1h BB20/2 and RSI<25 or >75, 1.5 ATR stop, BB mid target, 24h time stop','risk_per_trade':RISK,'notional_cap':NOTIONAL_CAP,'daily_entry_halt':DAILY_STOP,'weekly_entry_halt':WEEKLY_STOP,'portfolio_drawdown_hard_halt':DD_STOP}},trades,curve
+
+def main():
+    data=prep();metrics=[];trades=[];curves=[]
+    for name,a,b in WINDOWS:
+        for stress in (False,True):
+            m,tr,eq=run(data,ms(a),ms(b),stress);m['window']=name;metrics.append(m)
+            trades += [{**x,'window':name,'stress':stress} for x in tr]
+            curves += [{**x,'window':name,'stress':stress} for x in eq]
+    out=ROOT/'results';out.mkdir(exist_ok=True)
+    doc={'generated_at_utc':dt.datetime.now(dt.timezone.utc).isoformat(),'code_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'signal_code_sha256':hashlib.sha256((ROOT/'src'/'backtest.py').read_bytes()).hexdigest(),'data_sha256':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((ROOT/'data'/'raw').glob('*_1h.csv'))},'results':metrics}
+    (out/'hybrid_regime_metrics.json').write_text(json.dumps(doc,indent=2),encoding='utf8')
+    for fname,rows in [('hybrid_regime_trades.csv',trades),('hybrid_regime_equity.csv',curves)]:
+        with (out/fname).open('w',newline='',encoding='utf8') as f:
+            fields=list(dict.fromkeys(k for row in rows for k in row));w=csv.DictWriter(f,fieldnames=fields);w.writeheader();w.writerows(rows)
+    for x in metrics:print(x['window'],'stress' if x['stress'] else 'base',x['net_return_fraction'],'PF',x['profit_factor'],'DD',x['max_drawdown_fraction'],'n',x['trade_count'],'trend/range',x['trend_trades'],x['range_trades'],'weekly mean/median',x['weekly_return_mean'],x['weekly_return_median'])
+if __name__=='__main__':main()
