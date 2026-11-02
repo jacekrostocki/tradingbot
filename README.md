@@ -1,6 +1,6 @@
 # Crypto Quant Research
 
-Research-only repository for Kraken Futures linear perpetual contracts. **LIVE trading and order execution are not implemented.** Initial research equity is fixed at USD 900. Historical performance is not a promise of future returns; the 10% weekly/monthly aspiration is not a test objective or guarantee.
+Research-only repository for Kraken Futures linear perpetual contracts. **LIVE trading and order execution are not implemented.** Initial research equity is fixed at USD 900. The 3% average weekly return is a qualification target, not a promise or guarantee; it is not to be pursued by increasing risk or leverage.
 
 ## Data
 
@@ -10,7 +10,7 @@ Download a rolling 3+ year sample (public Kraken Futures trade candles and fundi
 python -m src.data_store --start 2023-11-02T00:00:00+00:00 --end 2026-11-02T12:00:00+00:00 --allow-gaps
 ```
 
-The downloader writes 12 OHLCV CSVs (BTC, ETH, SOL, XRP × 1h, 4h, 1d), a recent funding capture, and SHA-256 manifests under `data/raw/`. `--allow-gaps` preserves and counts gaps in the manifest instead of stopping; inspect them before research. Refresh by rerunning with an updated `--end`; overlapping timestamps are deduplicated by the downloader's range assembly. By default the downloader fails on detected gaps. All API calls are public and unauthenticated.
+The downloader writes 16 OHLCV CSVs (BTC, ETH, SOL, XRP × 5m, 1h, 4h, 1d), a recent funding capture, and SHA-256 manifests under `data/raw/`. `--allow-gaps` preserves and counts gaps in the manifest instead of stopping; inspect them before research. Refresh by rerunning with an updated `--end`; overlapping timestamps are deduplicated by the downloader's range assembly. By default the downloader fails on detected gaps. All API calls are public and unauthenticated.
 
 Kraken's chart API timestamps are UTC milliseconds and the request parameters use epoch seconds. `trade` candles reflect executed-trade charts, not mark or index prices. To obtain a longer funding history, run:
 
@@ -35,4 +35,4 @@ Legacy Bybit summaries in `research/legacy_intraday_results.csv` are retained fo
 ## Reproducibility and safety
 
 Experiments save config, code hash, metrics, trade ledger, costs, split indices, and dataset manifests. Do not tune on the final chronological holdout. No API secrets belong in the repository. There is no live trading adapter, key handling, or order placement in this project.
-Latest data-audited iteration and limitations: see [`research/ITERATION_REPORT_2026-11-02.md`](research/ITERATION_REPORT_2026-11-02.md). Full-history screens are reproduced with `python -m src.backtest --assets BTC ETH SOL XRP --output results/full_history_individual` and `python -m src.full_history_portfolio_screen`. Current status remains research-only / NO-GO for deployment.
+Latest data-audited iteration and limitations: see [`research/ITERATION_REPORT_2026-11-02.md`](research/ITERATION_REPORT_2026-11-02.md) and [`research/ITERATION_2_2026-11-02.md`](research/ITERATION_2_2026-11-02.md). The second report covers the 5m screens, weekly bootstrap analysis, and hybrid trend/mean-reversion test. Reproduce its data audit and core tests with the commands in that report. Current status remains research-only / NO-GO for deployment.
