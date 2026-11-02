@@ -41,7 +41,7 @@ def main():
          curves += [{**x,'strategy':label,'window':name,'slots':slots,'stress':stress} for x in eq]
     out=ROOT/'results'/'full_history_portfolio';out.mkdir(exist_ok=True,parents=True)
     files=sorted((ROOT/'data'/'raw').glob('*_1h.csv'))+sorted((ROOT/'data'/'processed').glob('*_funding_complete_1h.csv'))
-    doc={'generated_at_utc':dt.datetime.now(dt.timezone.utc).isoformat(),'code_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'portfolio_engine_sha256':hashlib.sha256((ROOT/'src'/'portfolio_concurrency.py').read_bytes()).hexdigest(),'signal_code_sha256':hashlib.sha256((ROOT/'src'/'backtest.py').read_bytes()).hexdigest(),'data_sha256':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files},'funding_filter_adverse_hourly_rate_threshold':FUND_THRESHOLD,'total_open_stop_risk_budget_fraction':TOTAL_OPEN_RISK,'results':metrics}
+    doc={'generated_at_utc':dt.datetime.now(dt.timezone.utc).isoformat(),'code_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'portfolio_engine_sha256':hashlib.sha256((ROOT/'src'/'portfolio_concurrency.py').read_bytes()).hexdigest(),'signal_code_sha256':hashlib.sha256((ROOT/'src'/'backtest.py').read_bytes()).hexdigest(),'data_sha256':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files},'funding_filter_adverse_hourly_rate_threshold':FUND_THRESHOLD,'funding_filter_threshold_unit':'relative hourly rate; 0.00002 = 0.2 basis point/hour','total_open_stop_risk_budget_fraction':TOTAL_OPEN_RISK,'results':metrics}
     (out/'metrics.json').write_text(json.dumps(doc,indent=2),encoding='utf8')
     for fn,rows in [('trades.csv',trades),('equity.csv',curves)]:
         with (out/fn).open('w',newline='',encoding='utf8') as f:
